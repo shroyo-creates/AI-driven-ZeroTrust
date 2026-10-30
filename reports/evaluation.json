@@ -1,0 +1,245 @@
+{
+  "config": {
+    "seed": 42,
+    "users": 200,
+    "attacks_per_phase": 300,
+    "events": 5861,
+    "data": "synthetic",
+    "split": "train months 0-3, test month 4"
+  },
+  "RQ1_login": {
+    "B0 MFA always": {
+      "roc_auc": 0.5,
+      "tpr@fpr1%": 0.0,
+      "tpr@fpr5%": 0.0,
+      "tpr@fpr10%": 0.0,
+      "detected": 1.0,
+      "detected_by_kind": {
+        "naive": 1.0,
+        "targeted": 1.0,
+        "token": 1.0
+      },
+      "stepups_per_100_genuine": 100.0,
+      "restricted_genuine_%": 1.2907768129547055,
+      "policy_violations": 0
+    },
+    "B1 static rules": {
+      "roc_auc": 0.8333333333333333,
+      "tpr@fpr1%": 0.6666666666666666,
+      "tpr@fpr5%": 0.6666666666666666,
+      "tpr@fpr10%": 0.6666666666666666,
+      "detected": 0.6833333333333333,
+      "detected_by_kind": {
+        "naive": 1.0,
+        "targeted": 1.0,
+        "token": 0.05
+      },
+      "stepups_per_100_genuine": 3.684581084252523,
+      "restricted_genuine_%": 1.2907768129547055,
+      "policy_violations": 0
+    },
+    "B2 unbounded AI": {
+      "roc_auc": 0.8005929750449816,
+      "tpr@fpr1%": 0.6733333333333333,
+      "tpr@fpr5%": 0.68,
+      "tpr@fpr10%": 0.69,
+      "detected": 0.6833333333333333,
+      "detected_by_kind": {
+        "naive": 1.0,
+        "targeted": 0.99,
+        "token": 0.06
+      },
+      "stepups_per_100_genuine": 0.35203003989673787,
+      "restricted_genuine_%": 0.04693733865289838,
+      "policy_violations": 175
+    },
+    "PBCA": {
+      "roc_auc": 0.8005929750449816,
+      "tpr@fpr1%": 0.6733333333333333,
+      "tpr@fpr5%": 0.68,
+      "tpr@fpr10%": 0.69,
+      "detected": 0.7033333333333334,
+      "detected_by_kind": {
+        "naive": 1.0,
+        "targeted": 1.0,
+        "token": 0.11
+      },
+      "stepups_per_100_genuine": 4.03661112414926,
+      "restricted_genuine_%": 1.3377141516076039,
+      "policy_violations": 0
+    }
+  },
+  "RQ1_session": {
+    "B0 MFA always": {
+      "roc_auc": 0.5,
+      "tpr@fpr1%": 0.0,
+      "tpr@fpr5%": 0.0,
+      "tpr@fpr10%": 0.0,
+      "detected": 0.013333333333333334,
+      "detected_by_kind": {
+        "bulk": 0.02666666666666667,
+        "mimicry": 0.0
+      },
+      "stepups_per_100_genuine": 1.5,
+      "restricted_genuine_%": 0.0,
+      "policy_violations": 0
+    },
+    "B1 static rules": {
+      "roc_auc": 0.5,
+      "tpr@fpr1%": 0.0,
+      "tpr@fpr5%": 0.0,
+      "tpr@fpr10%": 0.0,
+      "detected": 0.013333333333333334,
+      "detected_by_kind": {
+        "bulk": 0.02666666666666667,
+        "mimicry": 0.0
+      },
+      "stepups_per_100_genuine": 1.5,
+      "restricted_genuine_%": 0.0,
+      "policy_violations": 0
+    },
+    "B2 unbounded AI": {
+      "roc_auc": 0.7715233333333333,
+      "tpr@fpr1%": 0.5333333333333333,
+      "tpr@fpr5%": 0.5766666666666667,
+      "tpr@fpr10%": 0.6066666666666667,
+      "detected": 0.56,
+      "detected_by_kind": {
+        "bulk": 1.0,
+        "mimicry": 0.12
+      },
+      "stepups_per_100_genuine": 6.0,
+      "restricted_genuine_%": 0.6,
+      "policy_violations": 15
+    },
+    "PBCA": {
+      "roc_auc": 0.7715233333333333,
+      "tpr@fpr1%": 0.5333333333333333,
+      "tpr@fpr5%": 0.5766666666666667,
+      "tpr@fpr10%": 0.6066666666666667,
+      "detected": 0.56,
+      "detected_by_kind": {
+        "bulk": 1.0,
+        "mimicry": 0.12
+      },
+      "stepups_per_100_genuine": 7.5,
+      "restricted_genuine_%": 0.6,
+      "policy_violations": 0
+    }
+  },
+  "RQ2_fuzz": {
+    "requests": 5000,
+    "violations": {
+      "B2 unbounded AI": 2404,
+      "PBCA": 0
+    }
+  },
+  "RQ3_containment": {
+    "bulk": {
+      "sessions": 34,
+      "contained_before_expiry_%": 100.0,
+      "median_windows_to_containment": 1.0,
+      "trigger_to_enforcement_ms_p95": 12.152481079101562,
+      "records_exposed_pbca_mean": 186.35294117647058,
+      "records_exposed_token_expiry_mean": 1146.735294117647,
+      "seconds_to_containment_token_expiry_mean": 1800.0
+    },
+    "mimicry": {
+      "sessions": 37,
+      "contained_before_expiry_%": 18.91891891891892,
+      "median_windows_to_containment": 5.0,
+      "trigger_to_enforcement_ms_p95": 12.987828254699707,
+      "records_exposed_pbca_mean": 132.67567567567568,
+      "records_exposed_token_expiry_mean": 140.7027027027027,
+      "seconds_to_containment_token_expiry_mean": 1800.0
+    }
+  },
+  "RQ4_latency_ms": {
+    "p50": 0.01211699998293625,
+    "p95": 12.130290000072819
+  },
+  "RQ4_frr_by_group": {
+    "frequency:frequent": {
+      "n": 4163,
+      "stepup_%": 3.6752342061013694
+    },
+    "frequency:infrequent": {
+      "n": 98,
+      "stepup_%": 19.387755102040817
+    },
+    "role:analyst": {
+      "n": 1089,
+      "stepup_%": 1.7447199265381086
+    },
+    "role:it_admin": {
+      "n": 483,
+      "stepup_%": 21.11801242236025
+    },
+    "role:relationship_manager": {
+      "n": 1088,
+      "stepup_%": 2.0220588235294117
+    },
+    "role:teller": {
+      "n": 1601,
+      "stepup_%": 1.811367895065584
+    }
+  },
+  "RQ4_threshold_sweep": {
+    "x0.5": {
+      "login_detected": 0.7033333333333334,
+      "session_detected": 0.5766666666666667,
+      "stepups_per_100_genuine": 4.03661112414926,
+      "session_flags_per_100_genuine_windows": 8.200000000000001
+    },
+    "x0.75": {
+      "login_detected": 0.7033333333333334,
+      "session_detected": 0.5666666666666667,
+      "stepups_per_100_genuine": 4.03661112414926,
+      "session_flags_per_100_genuine_windows": 7.9
+    },
+    "x1.0": {
+      "login_detected": 0.7033333333333334,
+      "session_detected": 0.56,
+      "stepups_per_100_genuine": 4.03661112414926,
+      "session_flags_per_100_genuine_windows": 7.5
+    },
+    "x1.25": {
+      "login_detected": 0.7033333333333334,
+      "session_detected": 0.56,
+      "stepups_per_100_genuine": 4.03661112414926,
+      "session_flags_per_100_genuine_windows": 7.199999999999999
+    },
+    "x1.5": {
+      "login_detected": 0.7033333333333334,
+      "session_detected": 0.5566666666666666,
+      "stepups_per_100_genuine": 4.03661112414926,
+      "session_flags_per_100_genuine_windows": 7.1
+    }
+  },
+  "RQ4_signal_ablation": {
+    "all signals": {
+      "roc_auc": 0.8005929750449816,
+      "tpr@fpr5%": 0.68,
+      "detected": 0.7033333333333334,
+      "stepups_per_100_genuine": 4.03661112414926
+    },
+    "no user agent": {
+      "roc_auc": 0.7985648908706876,
+      "tpr@fpr5%": 0.6766666666666666,
+      "detected": 0.7033333333333334,
+      "stepups_per_100_genuine": 4.03661112414926
+    },
+    "no managed flag": {
+      "roc_auc": 0.8005057498239849,
+      "tpr@fpr5%": 0.68,
+      "detected": 0.7033333333333334,
+      "stepups_per_100_genuine": 4.03661112414926
+    },
+    "IP only": {
+      "roc_auc": 0.8063674411327544,
+      "tpr@fpr5%": 0.6866666666666666,
+      "detected": 0.7033333333333334,
+      "stepups_per_100_genuine": 4.03661112414926
+    }
+  }
+}
