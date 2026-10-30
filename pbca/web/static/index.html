@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PBCA Control Plane</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --ink: #1d2330; --muted: #5d6677; --line: #e2e5eb;
+    --accent: #2f5bd3; --allow: #1f8a4c; --step: #b7791f; --restrict: #c05621; --deny: #c53030;
+    --chip: #eef1f6; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12151b; --panel: #1a1f27; --ink: #e5e8ee; --muted: #99a2b2; --line: #2a313c;
+      --accent: #7b9cff; --allow: #4cc082; --step: #e2b04a; --restrict: #ef8a4c; --deny: #f06a6a; --chip: #232a35;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12151b; --panel: #1a1f27; --ink: #e5e8ee; --muted: #99a2b2; --line: #2a313c;
+    --accent: #7b9cff; --allow: #4cc082; --step: #e2b04a; --restrict: #ef8a4c; --deny: #f06a6a; --chip: #232a35;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { padding: 18px 24px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  header h1 { margin: 0; font-size: 18px; }
+  header p { margin: 4px 0 0; color: var(--muted); }
+  main { display: grid; grid-template-columns: 340px 1fr; gap: 16px; padding: 16px 24px; max-width: 1400px; margin: 0 auto; }
+  main > div { min-width: 0; }
+  @media (max-width: 900px) { main { grid-template-columns: minmax(0, 1fr); padding: 16px; } }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; min-width: 0; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 10px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 8px 0 3px; }
+  select, input[type=number] { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); font: inherit; }
+  button { font: inherit; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--chip); color: var(--ink); cursor: pointer; margin: 4px 4px 0 0; }
+  button.primary { background: var(--accent); color: #fff; border-color: transparent; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  .row { display: flex; gap: 8px; } .row > * { flex: 1; }
+  .badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; color: #fff; }
+  .ALLOW { background: var(--allow); } .STEP_UP { background: var(--step); } .RESTRICT { background: var(--restrict); } .DENY { background: var(--deny); }
+  .muted { color: var(--muted); } .mono { font-family: var(--mono); font-size: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 6px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr.sel { background: var(--chip); } tbody tr { cursor: pointer; }
+  .feed { max-height: 520px; overflow: auto; }
+  .item { border-bottom: 1px solid var(--line); padding: 10px 0; }
+  .bars { display: grid; grid-template-columns: 70px 1fr 44px; gap: 4px 8px; align-items: center; margin: 6px 0; font-size: 12px; }
+  .bar { height: 8px; background: var(--chip); border-radius: 4px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; background: var(--accent); }
+  ul.notes { margin: 4px 0 0; padding-left: 18px; color: var(--muted); font-size: 12px; }
+  .wrap { overflow-x: auto; }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font-size: 13px; }
+  .eq { font-family: var(--mono); background: var(--chip); padding: 8px 10px; border-radius: 6px; font-size: 12px; }
+  .toggles label { display: inline-flex; align-items: center; gap: 4px; margin-right: 10px; color: var(--ink); font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>PBCA — Policy-Bounded Continuous Authorization</h1>
+  <p>Zero Trust IAM demo: the AI risk engine supplies evidence, the PDP decides, the PEP enforces. The model can tighten access but never loosen a mandatory rule.</p>
+</header>
+<main>
+  <div>
+    <section>
+      <h2>Start a session</h2>
+      <label for="emp">Employee</label>
+      <select id="emp"></select>
+      <label for="profile">Login as</label>
+      <select id="profile">
+        <option value="office">Employee — managed laptop, office</option>
+        <option value="home">Employee — managed laptop, home ISP</option>
+        <option value="attacker_foreign">Attacker — stolen password, unmanaged device abroad</option>
+        <option value="attacker_proxy">Attacker — proxy in same country, copied browser</option>
+        <option value="token_replay">Attacker — stolen session token on managed laptop</option>
+      </select>
+      <label for="mfa">Factor used at login</label>
+      <select id="mfa"><option>passkey</option><option>totp</option><option>sms</option><option value="">none</option></select>
+      <button class="primary" id="loginBtn">Log in</button>
+      <button id="scenarioBtn">Run case walk-through</button>
+    </section>
+
+    <section>
+      <h2>Selected session</h2>
+      <div id="selInfo" class="muted">No session selected.</div>
+      <label for="res">Resource</label>
+      <div class="row">
+        <select id="res"></select>
+        <select id="action"><option>read</option><option>export</option><option>write</option></select>
+      </div>
+      <button data-act="access">Request access</button>
+      <label>Session events (trigger re-evaluation)</label>
+      <button data-act="normal">Normal 5-min window</button>
+      <button data-act="bulk">Bulk view + export</button>
+      <button data-act="mimicry">Patient mimicry</button>
+      <button data-act="stepup">Complete passkey step-up</button>
+      <button data-act="device">Device falls out of compliance</button>
+      <button data-act="threat">Threat-intel: bad IP</button>
+      <button data-act="compromise">Analyst: confirm compromise</button>
+      <button id="tickBtn">Periodic Δt check</button>
+    </section>
+
+    <section>
+      <h2>Policy-bounding playground</h2>
+      <p class="muted" style="margin-top:0">Force any risk score, e.g. a fooled or poisoned model, and compare PBCA with an unbounded model (B2).</p>
+      <label for="pr">Risk r = <span id="prv">0.00</span></label>
+      <input id="pr" type="range" min="0" max="1" step="0.01" value="0" style="width:100%">
+      <label for="pc">Confidence c = <span id="pcv">1.00</span></label>
+      <input id="pc" type="range" min="0" max="1" step="0.125" value="1" style="width:100%">
+      <label for="pres">Resource</label>
+      <div class="row"><select id="pres"></select><select id="paction"><option>read</option><option>export</option></select></div>
+      <div class="toggles" style="margin-top:8px">
+        <label><input type="checkbox" id="pmanaged" checked> managed</label>
+        <label><input type="checkbox" id="pcompliant" checked> compliant</label>
+        <label><input type="checkbox" id="ppriv"> privileged</label>
+        <label><input type="checkbox" id="pbad"> bad IP</label>
+      </div>
+      <div id="pgOut" style="margin-top:10px"></div>
+    </section>
+  </div>
+
+  <div>
+    <section>
+      <h2>Sessions</h2>
+      <div class="wrap"><table>
+        <thead><tr><th>Session</th><th>User</th><th>Device</th><th>Active resource</th><th>Applied</th><th>r<sub>L</sub></th></tr></thead>
+        <tbody id="sessions"><tr><td colspan="6" class="muted">No sessions yet.</td></tr></tbody>
+      </table></div>
+    </section>
+
+    <section>
+      <h2>Decision feed</h2>
+      <div class="eq">d = stricter(d<sub>P</sub>, d<sub>R</sub>) &nbsp;·&nbsp; r = 1 − (1 − r<sub>L</sub>)(1 − r<sub>S</sub>) &nbsp;·&nbsp; c = min(1, n<sub>u</sub>/8)</div>
+      <div id="feed" class="feed"><p class="muted">Decisions appear here.</p></div>
+    </section>
+
+    <section>
+      <h2>CAEP events &amp; audit log</h2>
+      <div id="caep" class="muted">No events yet.</div>
+      <div id="audit" class="muted" style="margin-top:8px"></div>
+    </section>
+  </div>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let selected = null;
+
+async function api(path, body) {
+  const opts = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+  const r = await fetch(path, opts);
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.detail || r.statusText);
+  return data;
+}
+
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const badge = (d) => `<span class="badge ${esc(d)}">${esc(d.replace("_", "-"))}</span>`;
+const bar = (label, v) => `<span>${label}</span><div class="bar"><i style="width:${(100 * v).toFixed(1)}%"></i></div><span class="mono">${v.toFixed(3)}</span>`;
+
+function feedItem(d, title) {
+  const r = d.risk || {};
+  const notes = [...(d.policy_reasons || []), ...(d.risk_notes || [])];
+  const caep = d.caep_events && d.caep_events.length ? ` · CAEP: <span class="mono">${d.caep_events.map(esc).join(", ")}</span>` : "";
+  const el = document.createElement("div");
+  el.className = "item";
+  el.innerHTML = `
+    <div><b>${esc(title || d.trigger)}</b> · <span class="mono">${esc(d.user_id)}</span> → ${esc(d.resource)} (${esc(d.sensitivity)})</div>
+    <div style="margin-top:4px">Enforced ${badge(d.enforced || d.decision)} &nbsp; <span class="muted">d<sub>P</sub></span> ${badge(d.d_policy)} <span class="muted">d<sub>R</sub></span> ${badge(d.d_risk)}${caep}</div>
+    <div class="bars">${bar("r", r.risk || 0)}${bar("r_L", r.r_login || 0)}${bar("r_S", r.r_session || 0)}${bar("c", r.confidence || 0)}</div>
+    ${notes.length ? `<ul class="notes">${notes.map((n) => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}`;
+  const feed = $("feed");
+  if (feed.querySelector("p.muted")) feed.innerHTML = "";
+  feed.prepend(el);
+}
+
+async function refresh() {
+  const [sessions, caep, audit] = await Promise.all([api("/api/sessions"), api("/api/caep"), api("/api/audit?n=1")]);
+  const tb = $("sessions");
+  tb.innerHTML = sessions.length ? "" : `<tr><td colspan="6" class="muted">No sessions yet.</td></tr>`;
+  for (const s of sessions.slice().reverse()) {
+    const tr = document.createElement("tr");
+    if (s.session_id === selected) tr.className = "sel";
+    tr.innerHTML = `<td class="mono">${esc(s.session_id)}</td><td>${esc(s.user_id)}<div class="muted">${esc(s.role)}</div></td>
+      <td>${s.device_managed ? "managed" : "unmanaged"}${s.device_compliant ? "" : " · non-compliant"}</td>
+      <td>${esc(s.active_resource)}</td><td>${s.revoked ? badge("DENY") + ' <span class="muted">revoked</span>' : badge(s.applied)}</td>
+      <td class="mono">${s.r_login.toFixed(3)}</td>`;
+    tr.onclick = () => select(s.session_id, s);
+    tb.appendChild(tr);
+    if (s.session_id === selected) select(s.session_id, s, false);
+  }
+  const rows = caep.deliveries.slice().reverse().map((d) =>
+    `<tr><td class="mono">${esc(d.event_type)}</td><td class="mono">${esc(d.session_id)}</td><td>${badge(d.decision)}</td><td class="mono">${d.containment_ms} ms</td></tr>`).join("");
+  $("caep").innerHTML = rows
+    ? `<div class="wrap"><table><thead><tr><th>Event (SET)</th><th>Session</th><th>Tier</th><th>Trigger → receiver</th></tr></thead><tbody>${rows}</tbody></table></div>`
+    : "No CAEP events yet.";
+  $("audit").innerHTML = `Audit log: ${audit.count} entries · hash chain ${audit.chain_ok ? "<b style='color:var(--allow)'>intact</b>" : "<b style='color:var(--deny)'>broken</b>"}`;
+}
+
+function select(id, s, rerender = true) {
+  selected = id;
+  $("selInfo").innerHTML = `<div class="kv"><span class="muted">Session</span><span class="mono">${esc(id)}</span>
+    <span class="muted">User</span><span>${esc(s.user_id)} (${esc(s.role)})</span>
+    <span class="muted">Applied</span><span>${s.revoked ? badge("DENY") + " revoked" : badge(s.applied)}</span>
+    <span class="muted">MFA</span><span>${esc(s.mfa || "none")}</span></div>`;
+  document.querySelectorAll("[data-act]").forEach((b) => (b.disabled = s.revoked));
+  if (rerender) refresh();
+}
+
+async function run(fn) {
+  try { await fn(); } catch (e) { alert(e.message); }
+  await refresh();
+}
+
+$("loginBtn").onclick = () => run(async () => {
+  const d = await api("/api/login", { user_id: $("emp").value, profile: $("profile").value, mfa: $("mfa").value || null });
+  feedItem(d, `login (${$("profile").selectedOptions[0].text})`);
+  if (d.session) selected = d.session.session_id; else alert("Login denied: no session created.");
+});
+
+$("scenarioBtn").onclick = () => run(async () => {
+  const steps = await api("/api/scenario", {});
+  const el = document.createElement("div");
+  el.className = "item";
+  el.innerHTML = `<b>Case walk-through (Table V)</b><div class="wrap"><table><thead><tr><th>Event</th><th>Signals</th><th>Decision</th></tr></thead><tbody>${
+    steps.map((s) => `<tr><td>${esc(s.event)}</td><td class="mono">${esc(s.signals)}</td><td>${esc(s.decision)}${s.caep ? `<div class="muted mono">CAEP: ${esc(s.caep)}</div>` : ""}</td></tr>`).join("")}</tbody></table></div>`;
+  const feed = $("feed"); if (feed.querySelector("p.muted")) feed.innerHTML = ""; feed.prepend(el);
+});
+
+$("tickBtn").onclick = () => run(async () => { (await api("/api/tick", {})).forEach((d) => feedItem(d, "periodic Δt")); });
+
+document.querySelectorAll("[data-act]").forEach((b) => (b.onclick = () => run(async () => {
+  if (!selected) throw new Error("Select or start a session first.");
+  const sid = selected, act = b.dataset.act;
+  if (act === "access") feedItem(await api(`/api/sessions/${sid}/access`, { resource: $("res").value, action: $("action").value }), `access:${$("action").value}`);
+  else if (["normal", "bulk", "mimicry"].includes(act)) feedItem(await api(`/api/sessions/${sid}/activity`, { kind: act }), `behavior window (${act})`);
+  else if (act === "stepup") feedItem(await api(`/api/sessions/${sid}/step-up`, { factor: "passkey" }), "step-up completed");
+  else if (act === "device") feedItem(await api(`/api/sessions/${sid}/device`, { managed: true, os_patch_age_days: 90, edr_running: false }), "device compliance change");
+  else if (act === "threat") feedItem(await api(`/api/sessions/${sid}/threat`, { bad_ip: true }), "threat-intel match");
+  else if (act === "compromise") {
+    const user = (await api(`/api/sessions/${sid}`)).user_id;
+    const r = await api(`/api/users/${user}/compromise`, {});
+    alert(`Compromise confirmed for ${user}: ${r.events.length} CAEP events sent.`);
+  }
+})));
+
+async function playground() {
+  $("prv").textContent = (+$("pr").value).toFixed(2);
+  $("pcv").textContent = (+$("pc").value).toFixed(2);
+  const d = await api("/api/pdp/playground", {
+    risk: +$("pr").value, confidence: +$("pc").value, resource: $("pres").value, action: $("paction").value,
+    managed: $("pmanaged").checked, compliant: $("pcompliant").checked, privileged: $("ppriv").checked,
+    mfa: "totp", bad_ip: $("pbad").checked,
+  });
+  $("pgOut").innerHTML = `<div class="kv">
+    <span class="muted">d<sub>P</sub> (policy)</span><span>${badge(d.d_policy)}</span>
+    <span class="muted">d<sub>R</sub> (risk tier)</span><span>${badge(d.d_risk)}</span>
+    <span class="muted">PBCA final</span><span>${badge(d.pbca)}</span>
+    <span class="muted">B2 unbounded</span><span>${badge(d.b2_unbounded)} ${d.b2_violates_policy ? "<b style='color:var(--deny)'>looser than policy</b>" : ""}</span></div>
+    ${d.policy_reasons.length ? `<ul class="notes">${d.policy_reasons.map((n) => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}`;
+}
+
+(async function init() {
+  const [emps, res] = await Promise.all([api("/api/employees"), api("/api/resources")]);
+  $("emp").innerHTML = emps.map((e) => `<option value="${esc(e.user_id)}">${esc(e.user_id)} · ${esc(e.role)} · ${e.prior_logins} prior logins</option>`).join("");
+  const opts = res.map((r) => `<option value="${esc(r.name)}">${esc(r.name)} (${esc(r.sensitivity)})</option>`).join("");
+  $("res").innerHTML = opts; $("pres").innerHTML = opts;
+  $("res").value = "customer-records"; $("pres").value = "customer-records";
+  ["pr", "pc", "pres", "paction", "pmanaged", "pcompliant", "ppriv", "pbad"].forEach((id) => ($(id).oninput = playground));
+  await playground();
+  await refresh();
+})();
+</script>
+</body>
+</html>
